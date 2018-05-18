@@ -98,4 +98,4 @@ def flux(pixel, spectrum):
 
 if __name__ == '__main__':
     load_app_data()
-    app.run(port=56789)
+    app.run(debug=True, host='0.0.0.0', port=56789)

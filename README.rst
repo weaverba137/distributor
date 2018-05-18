@@ -2,4 +2,4 @@
 Distributor
 ===========
 
-This is a test.
+Proof-of-concept code for distributing spectroscopic data.
