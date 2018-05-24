@@ -69,48 +69,67 @@ def spectra(pixel):
 def flux(pixel, spectrum):
     """Return an individual spectrum.
     """
-    data = dict(pixel=pixel, spectrum=spectrum)
     cacheID = "{0:d}-{1:d}".format(pixel, spectrum)
     response = cache.get(cacheID)
     if response is None:
-        with fits.open(healpixels[pixel]) as hdulist:
-            # hdulist.info()
-            for spectrograph in 'brz':
-                data[spectrograph] = dict()
-                data[spectrograph]['wavelength'] = hdulist['{0}_WAVELENGTH'.format(spectrograph.upper())].data.tolist()
-                data[spectrograph]['flux'] = hdulist['{0}_FLUX'.format(spectrograph.upper())].data[data['spectrum']].tolist()
-                data[spectrograph]['ivar'] = hdulist['{0}_IVAR'.format(spectrograph.upper())].data[data['spectrum']].tolist()
-            data['desi_target'] = str(hdulist['FIBERMAP'].data[data['spectrum']]['DESI_TARGET'])
-            data['bgs_target'] = str(hdulist['FIBERMAP'].data[data['spectrum']]['BGS_TARGET'])
-            data['mws_target'] = str(hdulist['FIBERMAP'].data[data['spectrum']]['MWS_TARGET'])
-            data['night'] = int(hdulist['FIBERMAP'].data[data['spectrum']]['NIGHT'])
-            data['expid'] = int(hdulist['FIBERMAP'].data[data['spectrum']]['EXPID'])
-            data['tileid'] = int(hdulist['FIBERMAP'].data[data['spectrum']]['TILEID'])
-        with fits.open(os.path.join(os.path.dirname(healpixels[pixel]),
-                                    os.path.basename(healpixels[pixel]).replace('spectra', 'zbest'))) as hdulist:
-            fibermap = hdulist['FIBERMAP'].data[data['spectrum']]
-            targetid = int(fibermap['TARGETID'])
-            data['targetid'] = str(targetid)
-            data['ra'] = float(fibermap['RA_TARGET'])
-            data['dec'] = float(fibermap['DEC_TARGET'])
-            zcatalog = hdulist['ZBEST'].data
-            w = zcatalog['TARGETID'] == targetid
-            if w.any():
-                row = zcatalog[w.nonzero()[0]]
-                data['redshift'] = float(row['Z'])
-                data['zerr'] = float(row['ZERR'])
-                data['zwarn'] = float(row['ZWARN'])
-                data['type'] = str(row['SPECTYPE'][0])
-                data['subtype'] = str(zcatalog[w.nonzero()[0]]['SUBTYPE'][0])
-                # data['desi_target'] = str(row['DESI_TARGET'])
-                # data['bgs_target'] = str(row['BGS_TARGET'])
-                # data['mws_target'] = str(row['MWS_TARGET'])
-            # else:
-            #     print('Target {0:d} not found in ZCATALOG.'.format(spectrum['targetid']))
+        data = get_spectrum(pixel, spectrum)
         response = jsonify(data)
         response.headers.add('Access-Control-Allow-Origin', '*')
         cache.set(cacheID, response, timeout=3600)
     return response
+
+
+def get_spectrum(pixel, spectrum):
+    """Read spectrum data from files.
+
+    Parameters
+    ----------
+    pixel : :class:`int`
+        The healpixel.
+    spectrum : :class:`int`
+        The spectrum number.
+
+    Returns
+    -------
+    :class:`dict`
+        A dictionary suitable for conversion to JSON.
+    """
+    data = dict(pixel=pixel, spectrum=spectrum)
+    with fits.open(healpixels[pixel]) as hdulist:
+        # hdulist.info()
+        for spectrograph in 'brz':
+            data[spectrograph] = dict()
+            data[spectrograph]['wavelength'] = hdulist['{0}_WAVELENGTH'.format(spectrograph.upper())].data.tolist()
+            data[spectrograph]['flux'] = hdulist['{0}_FLUX'.format(spectrograph.upper())].data[data['spectrum']].tolist()
+            data[spectrograph]['ivar'] = hdulist['{0}_IVAR'.format(spectrograph.upper())].data[data['spectrum']].tolist()
+        data['desi_target'] = str(hdulist['FIBERMAP'].data[data['spectrum']]['DESI_TARGET'])
+        data['bgs_target'] = str(hdulist['FIBERMAP'].data[data['spectrum']]['BGS_TARGET'])
+        data['mws_target'] = str(hdulist['FIBERMAP'].data[data['spectrum']]['MWS_TARGET'])
+        data['night'] = int(hdulist['FIBERMAP'].data[data['spectrum']]['NIGHT'])
+        data['expid'] = int(hdulist['FIBERMAP'].data[data['spectrum']]['EXPID'])
+        data['tileid'] = int(hdulist['FIBERMAP'].data[data['spectrum']]['TILEID'])
+    with fits.open(os.path.join(os.path.dirname(healpixels[pixel]),
+                                os.path.basename(healpixels[pixel]).replace('spectra', 'zbest'))) as hdulist:
+        fibermap = hdulist['FIBERMAP'].data[data['spectrum']]
+        targetid = int(fibermap['TARGETID'])
+        data['targetid'] = str(targetid)
+        data['ra'] = float(fibermap['RA_TARGET'])
+        data['dec'] = float(fibermap['DEC_TARGET'])
+        zcatalog = hdulist['ZBEST'].data
+        w = zcatalog['TARGETID'] == targetid
+        if w.any():
+            row = zcatalog[w.nonzero()[0]]
+            data['redshift'] = float(row['Z'])
+            data['zerr'] = float(row['ZERR'])
+            data['zwarn'] = float(row['ZWARN'])
+            data['type'] = str(row['SPECTYPE'][0])
+            data['subtype'] = str(zcatalog[w.nonzero()[0]]['SUBTYPE'][0])
+            # data['desi_target'] = str(row['DESI_TARGET'])
+            # data['bgs_target'] = str(row['BGS_TARGET'])
+            # data['mws_target'] = str(row['MWS_TARGET'])
+        # else:
+        #     print('Target {0:d} not found in ZCATALOG.'.format(spectrum['targetid']))
+    return data
 
 
 if __name__ == '__main__':
