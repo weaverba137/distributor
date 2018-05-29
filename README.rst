@@ -3,7 +3,8 @@ Distributor
 ===========
 
 .. image:: distributor.jpg
-    :scale: 25
+    :scale: 10
+    :align: right
     :target: distributor.jpg
     :alt: Distributor Cap
 
