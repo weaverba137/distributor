@@ -1,6 +1,6 @@
 FROM nginx:latest
 
-RUN groupadd -r desi --gid=58102 && useradd -r -g desi --uid=34448 bweaver
+RUN groupadd -r desi --gid=58102 && useradd -r -g desi -G nginx --uid=34448 bweaver
 
 # Make /var/cache/nginx/ writable by non-root users
 RUN chgrp nginx /var/cache/nginx/
