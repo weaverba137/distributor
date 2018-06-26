@@ -1,11 +1,16 @@
 version: '2'
 services:
     app:
-        image: registry.spin.nersc.gov/bweaver/spin-lesson-1-app:latest
+        image: registry.spin.nersc.gov/bweaver/distributor-app:latest
+        volumes:
+        user: 34448:58102
+        environment:
+            DESI_SPECTRO_REDUX: /desi/spectro/redux
+            SPECPROD: mini
         cap_drop:
             - ALL
     web:
-        image: registry.spin.nersc.gov/bweaver/spin-lesson-1-nginx:latest
+        image: registry.spin.nersc.gov/bweaver/distributor-nginx:latest
         ports:
             - "60040:8080"
         volumes:
