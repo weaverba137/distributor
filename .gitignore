@@ -35,3 +35,6 @@ MANIFEST
 
 # Mac OSX
 .DS_Store
+
+# Application data
+app/desi
