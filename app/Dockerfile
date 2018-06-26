@@ -11,6 +11,8 @@ MAINTAINER Benjamin Alan Weaver <baweaver@lbl.gov>
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
+RUN groupadd -r desi --gid=58102 && useradd -r -g desi --uid=34448 bweaver
+
 WORKDIR /opt/app
 COPY distributor.py ./
 # COPY templates templates/
