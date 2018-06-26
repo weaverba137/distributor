@@ -18,7 +18,7 @@ services:
         volumes:
             - /global/project/projectdirs/desi/users/bweaver/distributor/web/nginx-proxy.conf:/etc/nginx/conf.d/default.conf:ro
         user: 34448:58102
-        group_add:
-            - nginx
+        # group_add:
+        #     - nginx
         cap_drop:
             - ALL
