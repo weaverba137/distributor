@@ -10,6 +10,8 @@ services:
             SPECPROD: mini
         cap_drop:
             - ALL
+        labels:
+            io.rancher.container.pull_image: always
     web:
         image: registry.spin.nersc.gov/bweaver/distributor-web:latest
         # image: nginx-rootless:v1
@@ -22,3 +24,5 @@ services:
         #     - nginx
         cap_drop:
             - ALL
+        labels:
+            io.rancher.container.pull_image: always
