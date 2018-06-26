@@ -1,12 +1,15 @@
 FROM nginx:latest
 
+RUN groupadd -r desi --gid=58102 && useradd -r -g desi --uid=34448 bweaver
+
 # Make /var/cache/nginx/ writable by non-root users
 RUN chgrp nginx /var/cache/nginx/
 RUN chmod g+w /var/cache/nginx/
 
 # Run as port 8080, which is available to non-root users allows us to drop
 # all remaining root capabilities from the container, which improves security.
-RUN sed --regexp-extended --in-place=.bak 's%(^\s+listen\s+)80(;)%\18080\2%' /etc/nginx/conf.d/default.conf
+# RUN sed --regexp-extended --in-place=.bak 's%(^\s+listen\s+)80(;)%\18080\2%' /etc/nginx/conf.d/default.conf
+COPY nginx-proxy.conf /etc/nginx/conf.d/default.conf
 EXPOSE 8080
 
 # Write the PID file to a location where regular users have write access.
