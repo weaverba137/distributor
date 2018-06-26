@@ -3,9 +3,10 @@ services:
     app:
         image: registry.spin.nersc.gov/bweaver/distributor-app:latest
         volumes:
+            - /global/project/projectdirs/desi/users/bweaver/distributor/app/desi:/opt/app/desi:ro
         user: 34448:58102
         environment:
-            DESI_SPECTRO_REDUX: /desi/spectro/redux
+            DESI_SPECTRO_REDUX: /opt/app/desi/spectro/redux
             SPECPROD: mini
         cap_drop:
             - ALL
