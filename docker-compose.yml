@@ -11,7 +11,7 @@ services:
         cap_drop:
             - ALL
     web:
-        image: registry.spin.nersc.gov/bweaver/distributor-nginx:latest
+        image: registry.spin.nersc.gov/bweaver/distributor-web:latest
         # image: nginx-rootless:v1
         ports:
             - "60040:8080"
