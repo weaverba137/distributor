@@ -20,7 +20,22 @@ import numpy as np
 from astropy.io import fits
 
 
+class CompressedFloatJSONEncoder(json.JSONEncoder):
+    _sig = 4  # Number of significant figures to keep.
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            if obj.dtype.kind == 'f':
+                return round_to_sig_fig(obj, self._sig)
+            else:
+                return obj.tolist()
+        return super(CompressedFloatJSONEncoder, self).default(obj)
+    def encode(self, obj):
+        e = super(CompressedFloatJSONEncoder, self).encode(obj)
+        return e.replace('"@', '').replace('@"', '')
+
+
 app = Flask(__name__)
+app.json_encoder = CompressedFloatJSONEncoder
 cache = None
 healpixels = None
 
@@ -79,7 +94,7 @@ def flux(pixel, spectrum):
     return response
 
 
-def get_spectrum(pixel, spectrum):
+def get_spectrum(pixel, spectrum, tolist=False):
     """Read spectrum data from files.
 
     Parameters
@@ -88,6 +103,8 @@ def get_spectrum(pixel, spectrum):
         The healpixel.
     spectrum : :class:`int`
         The spectrum number.
+    tolist : :class:`bool`, optional
+        If ``True``, coerce flux and wavelength values to Python :class:`list`.
 
     Returns
     -------
@@ -99,9 +116,16 @@ def get_spectrum(pixel, spectrum):
         # hdulist.info()
         for spectrograph in 'brz':
             data[spectrograph] = dict()
-            data[spectrograph]['wavelength'] = hdulist['{0}_WAVELENGTH'.format(spectrograph.upper())].data.tolist()
-            data[spectrograph]['flux'] = hdulist['{0}_FLUX'.format(spectrograph.upper())].data[data['spectrum']].tolist()
-            data[spectrograph]['ivar'] = hdulist['{0}_IVAR'.format(spectrograph.upper())].data[data['spectrum']].tolist()
+            w = hdulist['{0}_WAVELENGTH'.format(spectrograph.upper())].data
+            data[spectrograph]['w0'] = float(w[0])
+            data[spectrograph]['dw'] = float(np.diff(w).mean())
+            flux = hdulist['{0}_FLUX'.format(spectrograph.upper())].data[data['spectrum']]
+            ivar = hdulist['{0}_IVAR'.format(spectrograph.upper())].data[data['spectrum']]
+            if tolist:
+                flux = flux.tolist()
+                ivar = ivar.tolist()
+            data[spectrograph]['flux'] = flux
+            data[spectrograph]['ivar'] = ivar
         data['desi_target'] = str(hdulist['FIBERMAP'].data[data['spectrum']]['DESI_TARGET'])
         data['bgs_target'] = str(hdulist['FIBERMAP'].data[data['spectrum']]['BGS_TARGET'])
         data['mws_target'] = str(hdulist['FIBERMAP'].data[data['spectrum']]['MWS_TARGET'])
@@ -113,8 +137,8 @@ def get_spectrum(pixel, spectrum):
         fibermap = hdulist['FIBERMAP'].data[data['spectrum']]
         targetid = int(fibermap['TARGETID'])
         data['targetid'] = str(targetid)
-        data['ra'] = float(fibermap['RA_TARGET'])
-        data['dec'] = float(fibermap['DEC_TARGET'])
+        data['ra'] = float(fibermap['TARGET_RA'])
+        data['dec'] = float(fibermap['TARGET_DEC'])
         zcatalog = hdulist['ZBEST'].data
         w = zcatalog['TARGETID'] == targetid
         if w.any():
@@ -130,6 +154,53 @@ def get_spectrum(pixel, spectrum):
         # else:
         #     print('Target {0:d} not found in ZCATALOG.'.format(spectrum['targetid']))
     return data
+
+
+# The following constant was computed in maxima 5.35.1 using 64 bigfloat digits of precision
+__logBase10of2 = 3.010299956639811952137388947244930267681898814621085413104274611e-1
+
+
+def round_to_sig_fig(x, sig, format=True):
+    """Round and format the values in `x` to the number of significant figures in `sig`.
+
+    Parameters
+    ----------
+    x : :class:`numpy.ndarray`
+        Values to round.
+    sig : :class:`int`
+        Number of significant figures.
+    format : :class:`bool`, optional
+        If ``True``, format the rounded values to string.
+
+    Returns
+    -------
+    :class:`numpy.ndarray` or :class:`list`
+        A rounded array of the same type as `x` or a list of strings.
+
+    Notes
+    -----
+    Adapted from code found in `SELPythonLibs <https://github.com/odysseus9672/SELPythonLibs/blob/master/SigFigRounding.py>`_ .
+    """
+    if not np.isreal(x).all():
+        raise TypeError("round_to_sig_fig: x must be real.")
+
+    xsgn = np.sign(x)
+    absx = xsgn * x
+    mantissa, binaryExponent = np.frexp( absx )
+    decimalExponent = __logBase10of2 * binaryExponent
+    omag = np.floor(decimalExponent)
+    mantissa *= 10.0**(decimalExponent - omag)
+    w = mantissa < 1.0
+    if w.any():
+        mantissa[w] *= 10.0
+        omag[w] -= 1.0
+    mantissa = xsgn * np.around(mantissa, decimals=sig-1)
+    fmt = "@{:." + str(sig-1) + "g}@"
+    if format:
+        return [fmt.format(m*10.0**e) for m, e in zip(mantissa.tolist(), omag.tolist())]
+    return mantissa * 10.0**omag
+
+
 
 
 if __name__ == '__main__':
